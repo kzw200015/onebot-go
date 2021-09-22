@@ -64,9 +64,8 @@ func (bot *Bot) handleEvent(event Event) {
 			bot.executeEventHandler(event, handlers)
 		}
 	case MetaEvent:
-		if event.MetaEventType == "heartbeat" {
-
-		}
+	case NoticeEvent:
+	case RequestEvent:
 	}
 }
 
