@@ -1,4 +1,4 @@
-package main
+package onebot
 
 // OnMessage 注册消息 EventHandlerFunc
 func (bot *Bot) OnMessage(handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {

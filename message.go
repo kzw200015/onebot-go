@@ -1,4 +1,4 @@
-package main
+package onebot
 
 const (
 	PrivateMessage = "private"

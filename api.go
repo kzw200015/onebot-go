@@ -1,4 +1,4 @@
-package main
+package onebot
 
 import (
 	"github.com/google/uuid"

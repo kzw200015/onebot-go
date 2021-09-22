@@ -1,4 +1,4 @@
-package main
+package onebot
 
 type Context struct {
 	bot *Bot

@@ -1,4 +1,4 @@
-package main
+package onebot
 
 const (
 	MessageEvent = "message"
