@@ -3,7 +3,7 @@ package onebot
 const (
 	MessageEvent = "message"
 	NoticeEvent  = "notice"
-	RequestEvent = "Request"
+	RequestEvent = "request"
 	MetaEvent    = "meta_event"
 )
 
