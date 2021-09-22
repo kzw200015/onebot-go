@@ -1,7 +1,7 @@
 package onebot
 
 type Context struct {
-	bot *Bot
+	Bot *Bot
 	Event
 }
 

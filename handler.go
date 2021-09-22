@@ -73,7 +73,7 @@ func (bot *Bot) handleEvent(event Event) {
 func (bot *Bot) executeEventHandler(event Event, handlers []EventHandlerFunc) {
 	for _, handler := range handlers {
 		err := handler(&Context{
-			bot:   bot,
+			Bot:   bot,
 			Event: event,
 		})
 		if err != nil {
