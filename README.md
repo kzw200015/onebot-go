@@ -32,7 +32,7 @@ func main() {
 	qqBot := onebot.NewBot(onebot.Config{
 		SelfId:   12345678,
 		AdminIds: []int64{12345678},
-		URL:      "wss://example.com/ws",
+		URL:      "wss://example.com/ws", //目前支持正向WS连接
 		Token:    "password",
 		Logger:   onebot.DefaultLogger(logrus.DebugLevel),
 	})
