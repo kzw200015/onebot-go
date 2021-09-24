@@ -2,3 +2,4 @@
 .vscode
 *.iml
 main.go
+onebot_test.go
