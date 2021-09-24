@@ -38,7 +38,7 @@ func main() {
 	})
 
 	qqBot.OnPrivateMessage(func(ctx *onebot.Context) error {
-		resp, err := ctx.Bot.SendPrivateMessage(ctx.UserId, onebot.Text(ctx.RawMessage))
+		resp, err := ctx.Send(onebot.Text(ctx.RawMessage))
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func main() {
 
 	// 使用中间件
 	qqBot.OnMessageWithPrefix("", func(ctx *onebot.Context) error {
-		resp, err := ctx.Bot.SendPrivateMessage(ctx.UserId, onebot.Text(ctx.RawMessage))
+		resp, err := ctx.Send(onebot.Text(ctx.RawMessage))
 		if err != nil {
 			return err
 		}
