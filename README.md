@@ -14,6 +14,10 @@ onebot协议机器人库（开发中）
 - [x] `Text`
 - [x] `Face`
 - [x] `Image`
+- [x] `Record`
+- [x] `Video`
+- [x] `At`
+- [x] `Reply`
 
 ### 快速开始
 
