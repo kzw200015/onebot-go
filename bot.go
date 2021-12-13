@@ -1,150 +1,107 @@
 package onebot
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
-	"github.com/gorilla/websocket"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
-	"net/http"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 )
 
-// Bot 机器人
 type Bot struct {
-	client     *wsClient
-	config     Config
-	respTemp   sync.Map
-	logger     *logrus.Logger
-	handlerMap struct {
-		privateMessage EventHandlerMap
-		groupMessage   EventHandlerMap
-		notice         EventHandlerMap
-		request        EventHandlerMap
-		meta           EventHandlerMap
-	}
+	config     *BotConfig
+	httpServer *http.ServeMux
+	Logger     *logrus.Logger
+	handlerMap *HandlerMap
 }
 
-// Config 配置
-type Config struct {
-	SelfId           int64
-	AdminIds         []int64
-	URL              string
-	Token            string
-	Logger           *logrus.Logger
-	ReceiveHeartBeat bool
+type BotConfig struct {
+	SelfId     int64
+	Secret     string
+	HttpConfig HttpConfig
 }
 
-// NewBot 构造函数，返回Bot实例指针
-func NewBot(config Config) *Bot {
+type HttpConfig struct {
+	RemoteApiAddr string
+	Port          int
+	Path          string
+}
+
+func NewBot(config BotConfig) *Bot {
 	return &Bot{
-		config: config,
+		config:     &config,
+		httpServer: http.NewServeMux(),
+		Logger:     DefaultLogger(logrus.DebugLevel),
 	}
 }
 
-// Run 启动机器人
-func (bot *Bot) Run() {
-	bot.setLogger(bot.config.Logger)
+func (bot *Bot) Start() {
+	bot.init()
+	http.ListenAndServe(":"+strconv.Itoa(bot.config.HttpConfig.Port), bot.httpServer)
+}
 
-	err := bot.connect()
+func (bot *Bot) init() {
+	bot.httpServer.HandleFunc(bot.config.HttpConfig.Path, bot.eventDispatcher)
+}
+
+func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		bot.logger.Panic(err)
+		bot.Logger.Error("读取 Body 错误: " + err.Error())
+		return
 	}
-	// 监听系统中断信号，断开连接
-	interrupt := make(chan os.Signal)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	updates := bot.getUpdateChan()
-	for {
-		select {
-		case update := <-updates:
-			updateResult := gjson.ParseBytes(update)
+	if receivedSig := strings.TrimPrefix(r.Header.Get("X-Signature"), "sha1="); checkSignature(receivedSig, body, bot.config.Secret) {
+		bot.Logger.Warnln("签名认证失败")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
-			if updateResult.Get("post_type").Exists() { // 响应类型为事件
-				var e Event
-				err := json.Unmarshal(update, &e)
-				if err != nil {
-					bot.logger.Error(err)
-				}
-				bot.logger.Debugf("收到事件: %+v", e)
-				go bot.handleEvent(e)
+	w.WriteHeader(http.StatusNoContent)
 
-			} else if echo := updateResult.Get("echo"); echo.Exists() { // 响应类型为API调用
-				respChan, ok := bot.respTemp.LoadAndDelete(echo.String())
+	selfId, _ := strconv.ParseInt(r.Header.Get("X-Self-ID"), 10, 64)
 
-				if ok {
-					select {
-					case <-respChan.(chan APIResp):
-					default:
-						var resp APIResp
-						err := json.Unmarshal(update, &resp)
-						if err != nil {
-							bot.logger.Error(err)
-						}
-						bot.logger.Debugf("收到API请求响应: %+v", resp)
-						// 响应传入 channel
-						respChan.(chan APIResp) <- resp
-					}
-				}
-			}
-		case <-interrupt:
-			bot.close()
-			return
-		}
+	parsedBody := gjson.ParseBytes(body)
+	if bot.config.SelfId != selfId {
+		bot.Logger.Warnln("未知 self_id 事件上报", selfId)
+		return
+	}
+
+	postType := parsedBody.Get("post_type").String()
+	switch postType {
+	case PostTypeMessage:
+		bot.dispatch(body, postType)
+	case PostTypeNotice:
+		bot.dispatch(body, postType)
+	case PostTypeRequest:
+		bot.dispatch(body, postType)
+	case PostTypeMeta:
+		bot.dispatch(body, postType)
 	}
 }
 
-func (bot *Bot) setLogger(logger *logrus.Logger) {
-	bot.logger = logger
-}
-
-// connect 连接服务器
-func (bot *Bot) connect() error {
-	bot.logger.Info("正在连接")
-	client, err := newClient(
-		bot.config.URL,
-		http.Header{"Authorization": []string{"Bearer " + bot.config.Token}})
-
-	if err != nil {
-		return err
+func (bot *Bot) dispatch(body []byte, postType string) {
+	var e Event
+	if err := json.Unmarshal(body, &e); err != nil {
+		bot.Logger.Error("解析 MessageEvent 错误: " + err.Error())
+		return
 	}
-
-	bot.client = client
-	bot.logger.Info("已连接到:" + bot.config.URL)
-	return nil
-}
-
-// read 读取数据
-func (bot *Bot) read() (int, []byte) {
-	t, message, err := bot.client.conn.ReadMessage()
-	if err != nil {
-		bot.logger.Warnf("Websocket读取失败: %v", err)
+	DefaultEventValidator().Validate(&e)
+	handlers := bot.handlerMap.GetHandlers(postType)
+	for _, handler := range handlers {
+		go handler.Handle(bot, e)
 	}
-
-	return t, message
 }
 
-// getUpdateChan 获取更新channel
-func (bot *Bot) getUpdateChan() <-chan []byte {
-	messageChan := make(chan []byte)
-	go func() {
-		for {
-			t, message := bot.read()
-			if t == websocket.TextMessage {
-				messageChan <- message
-			}
-		}
-	}()
-
-	return messageChan
-}
-
-// close 断开服务器连接
-func (bot *Bot) close() error {
-	bot.logger.Info("正在断开")
-	return bot.client.conn.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+func checkSignature(sha string, body []byte, secret string) bool {
+	hash := hmac.New(sha1.New, []byte(secret))
+	hash.Write(body)
+	expectedSig := hex.EncodeToString(hash.Sum(nil))
+	return sha == expectedSig
 }

@@ -1,40 +1,24 @@
 package onebot
 
-// OnMessage 注册消息 EventHandlerFunc
-func (bot *Bot) OnMessage(handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	bot.OnMessageWithPrefix("", handler, middlewares...)
-}
-
-// OnMessageWithPrefix 匹配前缀注册消息 EventHandlerFunc
-func (bot *Bot) OnMessageWithPrefix(prefix string, handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	bot.OnPrivateMessageWithPrefix(prefix, handler, middlewares...)
-	bot.OnGroupMessageWithPrefix(prefix, handler, middlewares...)
-}
-
-// OnPrivateMessage 注册私聊消息 EventHandlerFunc
-func (bot *Bot) OnPrivateMessage(handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	bot.OnPrivateMessageWithPrefix("", handler, middlewares...)
-}
-
-// OnPrivateMessageWithPrefix 匹配前缀注册私聊消息 EventHandlerFunc
-func (bot *Bot) OnPrivateMessageWithPrefix(prefix string, handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	h := handler
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
+func (bot *Bot) On(postType string, handler EventHandler) {
+	handlers, isLoaded := bot.handlerMap.LoadOrStore(postType, []EventHandler{handler})
+	if isLoaded {
+		handlers = append(handlers.([]EventHandler), handler)
 	}
-	bot.handlerMap.privateMessage.Set(prefix, h)
 }
 
-// OnGroupMessage 注册群聊消息 EventHandlerFunc
-func (bot *Bot) OnGroupMessage(handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	bot.OnGroupMessageWithPrefix("", handler, middlewares...)
+func (bot *Bot) OnMessage(fn EventHandlerFunc) {
+	bot.On(PostTypeMessage, EventHandler{fn: fn})
 }
 
-// OnGroupMessageWithPrefix 匹配前缀注册群聊消息 EventHandlerFunc
-func (bot *Bot) OnGroupMessageWithPrefix(prefix string, handler EventHandlerFunc, middlewares ...EventMiddlewareFunc) {
-	h := handler
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
-	}
-	bot.handlerMap.groupMessage.Set(prefix, h)
+func (bot *Bot) OnNotice(fn EventHandlerFunc) {
+	bot.On(PostTypeNotice, EventHandler{fn: fn})
+}
+
+func (bot *Bot) OnRequest(fn EventHandlerFunc) {
+	bot.On(PostTypeRequest, EventHandler{fn: fn})
+}
+
+func (bot *Bot) OnMeta(fn EventHandlerFunc) {
+	bot.On(PostTypeMeta, EventHandler{fn: fn})
 }

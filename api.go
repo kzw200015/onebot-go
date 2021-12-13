@@ -1,79 +1,63 @@
 package onebot
 
 import (
-	"github.com/google/uuid"
-	"time"
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
+	"path"
 )
 
-// APIReq API请求 https://github.com/botuniverse/onebot/blob/master/v11/specs/communication/ws.md
-type APIReq struct {
-	Action string      `json:"action"`
-	Params interface{} `json:"params"`
-	Echo   string      `json:"echo"`
-}
+const MimeType = "application/json"
 
-// APIResp API响应 https://github.com/botuniverse/onebot/blob/master/v11/specs/communication/ws.md
+// APIResp API响应 https://github.com/botuniverse/onebot-11/blob/master/communication/http.md#%E5%93%8D%E5%BA%94
 type APIResp struct {
 	Status  string      `json:"status"`
 	Retcode int         `json:"retcode"`
 	Data    interface{} `json:"data"`
-	Echo    string      `json:"echo"`
 }
 
-func (r APIResp) IsOK() bool {
-	return r.Status == "ok"
-}
-
-// SendPrivateMessage 发送私聊消息 https://github.com/botuniverse/onebot/blob/master/v11/specs/api/public.md#send_private_msg-%E5%8F%91%E9%80%81%E7%A7%81%E8%81%8A%E6%B6%88%E6%81%AF
-func (bot *Bot) SendPrivateMessage(userId int64, message ...MessageSegment) (APIResp, error) {
-	bot.logger.Infof("发送私聊消息至 %v :%v", userId, message)
-	params := map[string]interface{}{
-		"user_id": userId,
-		"message": message,
-	}
-	return bot.Request(APIReq{
-		Action: "send_private_msg",
-		Params: params,
+// SendPrivateMsg 发送私聊消息 https://github.com/botuniverse/onebot-11/blob/master/api/public.md#send_private_msg-%E5%8F%91%E9%80%81%E7%A7%81%E8%81%8A%E6%B6%88%E6%81%AF
+func (bot *Bot) SendPrivateMsg(userId int64, msg interface{}, autoEscape bool) (APIResp, error) {
+	return bot.Request("send_private_msg", map[string]interface{}{
+		"user_id":     userId,
+		"message":     msg,
+		"auto_escape": autoEscape,
 	})
 }
 
-// SendGroupMessage 发送群消息 https://github.com/botuniverse/onebot/blob/master/v11/specs/api/public.md#send_group_msg-%E5%8F%91%E9%80%81%E7%BE%A4%E6%B6%88%E6%81%AF
-func (bot *Bot) SendGroupMessage(groupId int64, message ...MessageSegment) (APIResp, error) {
-	bot.logger.Infof("发送群消息至 %v :%v", groupId, message)
-	params := map[string]interface{}{
-		"group_id": groupId,
-		"message":  message,
-	}
-	return bot.Request(APIReq{
-		Action: "send_group_msg",
-		Params: params,
+// SendGroupMsg 发送群消息 https://github.com/botuniverse/onebot-11/blob/master/api/public.md#send_group_msg-%E5%8F%91%E9%80%81%E7%BE%A4%E6%B6%88%E6%81%AF
+func (bot *Bot) SendGroupMsg(groupId int64, msg interface{}, autoEscape bool) (APIResp, error) {
+	return bot.Request("send_group_msg", map[string]interface{}{
+		"group_id":    groupId,
+		"message":     msg,
+		"auto_escape": autoEscape,
 	})
 }
 
-// Request 发送请求，一般情况不应直接使用此方法
-func (bot *Bot) Request(req APIReq) (APIResp, error) {
-	echo := uuid.NewString()
-	req.Echo = echo
-	respChan := make(chan APIResp)
-	bot.respTemp.Store(echo, respChan)
-
-	// 加锁以并发安全
-	bot.client.mu.Lock()
-	err := bot.client.conn.WriteJSON(req)
-	bot.client.mu.Unlock()
+func (bot *Bot) Request(action string, requestBody interface{}) (APIResp, error) {
+	bs, err := json.Marshal(requestBody)
 	if err != nil {
 		return APIResp{}, err
 	}
 
-	var resp APIResp
-
-	select {
-	case resp = <-respChan:
-		close(respChan)
-	case <-time.After(10 * time.Second):
-		close(respChan) //关闭channel，通知本次请求已结束
-		bot.logger.Warnf("API请求超时: %+v", req)
+	resp, err := http.Post(path.Join(bot.config.HttpConfig.RemoteApiAddr, action),
+		MimeType,
+		bytes.NewReader(bs))
+	if err != nil {
+		return APIResp{}, err
 	}
 
-	return resp, nil
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return APIResp{}, err
+	}
+
+	var apiResp APIResp
+	err = json.Unmarshal(respBody, &apiResp)
+	if err != nil {
+		return APIResp{}, err
+	}
+
+	return apiResp, nil
 }

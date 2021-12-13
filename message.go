@@ -1,11 +1,6 @@
 package onebot
 
-const (
-	PrivateMessage = "private"
-	GroupMessage   = "group"
-)
-
-// MessageSegment 消息段 https://github.com/botuniverse/onebot/blob/master/v11/specs/message/array.md
+// MessageSegment 消息段 https://github.com/botuniverse/onebot-11/blob/master/message/array.md
 type MessageSegment struct {
 	Type string            `json:"type"`
 	Data map[string]string `json:"data"`
