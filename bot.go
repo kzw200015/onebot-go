@@ -49,9 +49,9 @@ func New(botConfig BotConfig) *Bot {
 
 func (bot *Bot) Start() {
 	bot.init()
-	go http.ListenAndServe(bot.BotConfig.ServerConfig.Address, bot.httpServer)
 	bot.Logger.Infoln("Bot tarted")
 	bot.Logger.Infoln("Listening event on " + path.Join(bot.BotConfig.ServerConfig.Address, bot.BotConfig.ServerConfig.Path))
+	http.ListenAndServe(bot.BotConfig.ServerConfig.Address, bot.httpServer)
 }
 
 func (bot *Bot) init() {
