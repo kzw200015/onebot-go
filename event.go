@@ -25,20 +25,24 @@ type Event struct {
 	RawMessage  string           `json:"raw_message" validate:"required"`
 	Font        int32            `json:"font" validate:"required"`
 	Sender      Sender           `json:"sender" validate:"required"`
-	GroupId     int64            `json:"group_id" validate:"required_if=MessageType eq group"`
-	Anonymous   Anonymous        `json:"anonymous"`
+
+	// group
+	GroupId   int64     `json:"group_id" validate:"required_if=MessageType group"`
+	Anonymous Anonymous `json:"anonymous"`
 }
 
 type Sender struct {
 	UserId   int    `json:"user_id" validate:"required"`
-	Nickname string `json:"nickname"`
-	Sex      string `json:"sex"`
+	Nickname string `json:"nickname" validate:"required"`
+	Sex      string `json:"sex" validate:"oneof=male female unknown"`
 	Age      int    `json:"age"`
 	Card     string `json:"card"`
-	Area     string `json:"area"`
-	Level    string `json:"level"`
-	Role     string `json:"role"`
-	Title    string `json:"title"`
+
+	// group extras
+	Area  string `json:"area"`
+	Level string `json:"level"`
+	Role  string `json:"role"`
+	Title string `json:"title"`
 }
 
 type Anonymous struct {

@@ -19,6 +19,10 @@ onebot协议机器人库（开发中）
 - [x] `At`
 - [x] `Reply`
 
+### 事件
+
+- [x] `message`
+
 ### 快速开始
 
 ```go
@@ -41,40 +45,10 @@ func main() {
 		Logger:   onebot.DefaultLogger(logrus.DebugLevel),
 	})
 
-	qqBot.OnPrivateMessage(func(ctx *onebot.Context) error {
-		resp, err := ctx.Send(onebot.Text(ctx.RawMessage))
-		if err != nil {
-			return err
-		}
-
-		if resp.IsOK() {
-			return nil
-		}
-		return errors.New("something wrong")
+	qqBot.OnPrivateMessage("echo",func(bot *Bot, event Event){
+		bot.SendPrivateMsg(event.UserId, event.RawMessage, false)
 	})
 
-	// 使用中间件
-	qqBot.OnMessageWithPrefix("", func(ctx *onebot.Context) error {
-		resp, err := ctx.Send(onebot.Text(ctx.RawMessage))
-		if err != nil {
-			return err
-		}
-
-		if resp.IsOK() {
-			return nil
-		}
-		return errors.New("something wrong")
-	}, func(next onebot.EventHandlerFunc) onebot.EventHandlerFunc {
-		return func(ctx *onebot.Context) error {
-			fmt.Println("before handler")
-			if err := next(ctx); err != nil {
-				// process error
-			}
-			fmt.Println("after handler")
-			return nil
-		}
-	})
-
-	qqBot.Run()
+	qqBot.Start()
 }
 ```
