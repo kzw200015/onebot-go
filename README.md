@@ -25,6 +25,8 @@ onebot协议机器人库（开发中）
 
 ### 快速开始
 
+服务端实现推荐使用 `go-cqhttp`，使用HTTP/HTTP POST方式连接
+
 ```go
 package main
 
@@ -38,20 +40,20 @@ import (
 
 func main() {
 	bot := onebot.New(onebot.BotConfig{
-		SelfId: 12345678,
-		ApiConfig: onebot.ApiConfig{
-			Token:   "token",
-			Address: "http://localhost:5700",
+		SelfId: 12345678, //QQ号
+		ApiConfig: onebot.ApiConfig{ //与HTTP API配置要一致
+			Token:   "token", //API token
+			Address: "http://localhost:5700", //API地址
 		},
-		ServerConfig: onebot.ServerConfig{
-			Secret:  "secret",
-			Address: ":8080",
-			Path:    "/event",
+		ServerConfig: onebot.ServerConfig{ //与HTTP POST配置要一致
+			Secret:  "secret", //验证用secret
+			Address: ":8080", //监听地址
+			Path:    "/event", //监听Path
 		},
 	})
 
-	bot.OnPrivateMessage("echo", func(bot *onebot.Bot, event onebot.Event) {
-		bot.SendPrivateMsg(event.UserId, event.RawMessage, false)
+	bot.OnPrivateMessage("", func(bot *onebot.Bot, event onebot.Event) {
+		bot.SendPrivateMsg(event.UserId, onebot.MessageBuilder().Text("hello").Text("world").Build()...)
 	})
 
 	bot.Start()
