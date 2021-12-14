@@ -42,8 +42,9 @@ type ServerConfig struct {
 func New(botConfig BotConfig) *Bot {
 	return &Bot{
 		BotConfig:  &botConfig,
-		httpServer: http.NewServeMux(),
 		Logger:     DefaultLogger(logrus.DebugLevel),
+		httpServer: http.NewServeMux(),
+		handlerMap: &HandlerMap{},
 	}
 }
 
