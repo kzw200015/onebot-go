@@ -67,35 +67,41 @@ func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
 
 	selfId, _ := strconv.ParseInt(r.Header.Get("X-Self-ID"), 10, 64)
 
-	parsedBody := gjson.ParseBytes(body)
 	if bot.config.SelfId != selfId {
 		bot.Logger.Warnln("未知 self_id 事件上报", selfId)
 		return
 	}
 
-	postType := parsedBody.Get("post_type").String()
-	switch postType {
-	case PostTypeMessage:
-		bot.dispatch(body, postType)
-	case PostTypeNotice:
-		bot.dispatch(body, postType)
-	case PostTypeRequest:
-		bot.dispatch(body, postType)
-	case PostTypeMeta:
-		bot.dispatch(body, postType)
-	}
+	postType := gjson.ParseBytes(body).Get("post_type").String()
+	bot.dispatch(body, postType)
 }
 
 func (bot *Bot) dispatch(body []byte, postType string) {
-	var e Event
-	if err := json.Unmarshal(body, &e); err != nil {
-		bot.Logger.Error("解析 MessageEvent 错误: " + err.Error())
+	var event Event
+	if err := json.Unmarshal(body, &event); err != nil {
+		bot.Logger.Errorln("解析 MessageEvent 错误: " + err.Error())
 		return
 	}
-	DefaultEventValidator().Validate(&e)
+
+	if err := DefaultEventValidator().Validate(&event); err != nil {
+		bot.Logger.Errorln("解析 MessageEvent 错误: " + err.Error())
+		return
+	}
+
 	handlers := bot.handlerMap.GetHandlers(postType)
 	for _, handler := range handlers {
-		go handler.Handle(bot, e)
+
+		if event.PostType == PostTypeMessage {
+			if !strings.HasPrefix(event.RawMessage, handler.MessagePrefix) {
+				continue
+			}
+
+			if handler.MessageType != "" && handler.MessageType != event.MessageType {
+				continue
+			}
+		}
+
+		go handler.Handle(bot, event)
 	}
 }
 

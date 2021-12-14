@@ -5,6 +5,9 @@ const (
 	PostTypeNotice  = "notice"
 	PostTypeRequest = "request"
 	PostTypeMeta    = "meta_event"
+
+	MessageTypePrivate = "private"
+	MessageTypeGroup   = "group"
 )
 
 // Event 事件 https://github.com/botuniverse/onebot-11/tree/master/event

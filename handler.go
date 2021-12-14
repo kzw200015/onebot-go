@@ -1,15 +1,15 @@
 package onebot
 
 import (
-	"strings"
 	"sync"
 )
 
 type EventHandlerFunc func(*Bot, Event)
 
 type EventHandler struct {
-	prefix string
-	fn     EventHandlerFunc
+	MessagePrefix string
+	MessageType   string
+	Handle        EventHandlerFunc
 }
 
 type HandlerMap struct {
@@ -22,10 +22,4 @@ func (hm *HandlerMap) GetHandlers(postType string) []EventHandler {
 		return []EventHandler{}
 	}
 	return handlers.([]EventHandler)
-}
-
-func (eh EventHandler) Handle(bot *Bot, event Event) {
-	if strings.HasPrefix(event.RawMessage, eh.prefix) {
-		eh.fn(bot, event)
-	}
 }

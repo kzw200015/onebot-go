@@ -7,18 +7,49 @@ func (bot *Bot) On(postType string, handler EventHandler) {
 	}
 }
 
-func (bot *Bot) OnMessage(fn EventHandlerFunc) {
-	bot.On(PostTypeMessage, EventHandler{fn: fn})
+func (bot *Bot) OnMessage(prefix string, fn EventHandlerFunc) {
+	bot.On(PostTypeMessage, EventHandler{
+		MessagePrefix: prefix,
+		MessageType:   "",
+		Handle:        fn,
+	})
+}
+
+func (bot *Bot) OnPrivateMessage(prefix string, fn EventHandlerFunc) {
+	bot.On(PostTypeMessage, EventHandler{
+		MessagePrefix: prefix,
+		MessageType:   MessageTypePrivate,
+		Handle:        fn,
+	})
+}
+func (bot *Bot) OnGroupMessage(prefix string, fn EventHandlerFunc) {
+	bot.On(PostTypeMessage, EventHandler{
+		MessagePrefix: prefix,
+		MessageType:   MessageTypeGroup,
+		Handle:        fn,
+	})
 }
 
 func (bot *Bot) OnNotice(fn EventHandlerFunc) {
-	bot.On(PostTypeNotice, EventHandler{fn: fn})
+	bot.On(PostTypeNotice, EventHandler{
+		MessagePrefix: "",
+		MessageType:   "",
+		Handle:        fn,
+	})
 }
 
 func (bot *Bot) OnRequest(fn EventHandlerFunc) {
-	bot.On(PostTypeRequest, EventHandler{fn: fn})
+	bot.On(PostTypeRequest, EventHandler{
+		MessagePrefix: "",
+		MessageType:   "",
+		Handle:        fn,
+	})
 }
 
 func (bot *Bot) OnMeta(fn EventHandlerFunc) {
-	bot.On(PostTypeMeta, EventHandler{fn: fn})
+	bot.On(PostTypeMeta, EventHandler{
+		MessagePrefix: "",
+		MessageType:   "",
+		Handle:        fn,
+	})
 }
