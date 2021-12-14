@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 
@@ -15,27 +16,32 @@ import (
 )
 
 type Bot struct {
-	config     *BotConfig
-	httpServer *http.ServeMux
+	BotConfig  *BotConfig
 	Logger     *logrus.Logger
+	httpServer *http.ServeMux
 	handlerMap *HandlerMap
 }
 
 type BotConfig struct {
-	SelfId     int64
-	Secret     string
-	HttpConfig HttpConfig
+	SelfId       int64
+	ApiConfig    ApiConfig
+	ServerConfig ServerConfig
 }
 
-type HttpConfig struct {
-	RemoteApiAddr string
-	Port          int
-	Path          string
+type ApiConfig struct {
+	Token   string
+	Address string
 }
 
-func NewBot(config BotConfig) *Bot {
+type ServerConfig struct {
+	Secret  string
+	Address string
+	Path    string
+}
+
+func New(botConfig BotConfig) *Bot {
 	return &Bot{
-		config:     &config,
+		BotConfig:  &botConfig,
 		httpServer: http.NewServeMux(),
 		Logger:     DefaultLogger(logrus.DebugLevel),
 	}
@@ -43,11 +49,13 @@ func NewBot(config BotConfig) *Bot {
 
 func (bot *Bot) Start() {
 	bot.init()
-	http.ListenAndServe(":"+strconv.Itoa(bot.config.HttpConfig.Port), bot.httpServer)
+	go http.ListenAndServe(bot.BotConfig.ServerConfig.Address, bot.httpServer)
+	bot.Logger.Infoln("Bot tarted")
+	bot.Logger.Infoln("Listening event on " + path.Join(bot.BotConfig.ServerConfig.Address, bot.BotConfig.ServerConfig.Path))
 }
 
 func (bot *Bot) init() {
-	bot.httpServer.HandleFunc(bot.config.HttpConfig.Path, bot.eventDispatcher)
+	bot.httpServer.HandleFunc(bot.BotConfig.ServerConfig.Path, bot.eventDispatcher)
 }
 
 func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +65,7 @@ func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if receivedSig := strings.TrimPrefix(r.Header.Get("X-Signature"), "sha1="); checkSignature(receivedSig, body, bot.config.Secret) {
+	if receivedSig := strings.TrimPrefix(r.Header.Get("X-Signature"), "sha1="); checkSignature(receivedSig, body, bot.BotConfig.ServerConfig.Secret) {
 		bot.Logger.Warnln("签名认证失败")
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -67,7 +75,7 @@ func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
 
 	selfId, _ := strconv.ParseInt(r.Header.Get("X-Self-ID"), 10, 64)
 
-	if bot.config.SelfId != selfId {
+	if bot.BotConfig.SelfId != selfId {
 		bot.Logger.Warnln("未知 self_id 事件上报", selfId)
 		return
 	}

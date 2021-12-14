@@ -37,18 +37,23 @@ import (
 )
 
 func main() {
-	qqBot := onebot.NewBot(onebot.Config{
-		SelfId:   12345678,
-		AdminIds: []int64{12345678},
-		URL:      "wss://example.com/ws", //目前支持正向WS连接
-		Token:    "password",
-		Logger:   onebot.DefaultLogger(logrus.DebugLevel),
+	bot := onebot.New(onebot.BotConfig{
+		SelfId: 12345678,
+		ApiConfig: onebot.ApiConfig{
+			Token:   "token",
+			Address: "http://localhost:5700",
+		},
+		ServerConfig: onebot.ServerConfig{
+			Secret:  "secret",
+			Address: ":8080",
+			Path:    "/event",
+		},
 	})
 
-	qqBot.OnPrivateMessage("echo",func(bot *Bot, event Event){
+	bot.OnPrivateMessage("echo", func(bot *onebot.Bot, event onebot.Event) {
 		bot.SendPrivateMsg(event.UserId, event.RawMessage, false)
 	})
 
-	qqBot.Start()
+	bot.Start()
 }
 ```

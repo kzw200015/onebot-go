@@ -3,12 +3,11 @@ package onebot
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
 )
-
-const MimeType = "application/json"
 
 // APIResp API响应 https://github.com/botuniverse/onebot-11/blob/master/communication/http.md#%E5%93%8D%E5%BA%94
 type APIResp struct {
@@ -41,9 +40,15 @@ func (bot *Bot) Request(action string, requestBody interface{}) (APIResp, error)
 		return APIResp{}, err
 	}
 
-	resp, err := http.Post(path.Join(bot.config.HttpConfig.RemoteApiAddr, action),
-		MimeType,
-		bytes.NewReader(bs))
+	req, err := http.NewRequest(http.MethodPost, path.Join(bot.BotConfig.ApiConfig.Address), bytes.NewReader(bs))
+	if err != nil {
+		return APIResp{}, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", bot.BotConfig.ApiConfig.Token))
+
+	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
 		return APIResp{}, err
 	}
