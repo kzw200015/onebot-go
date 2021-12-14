@@ -16,25 +16,26 @@ type Event struct {
 	SelfId   int64  `json:"self_id" validate:"required"`
 	PostType string `json:"post_type" validate:"oneof=message notice request meta_event"`
 
+	SubType string `json:"sub_type"`
+
 	// message
-	MessageType string           `json:"message_type" validate:"oneof=private group"`
-	SubType     string           `json:"sub_type" validate:"oneof=friend group other"`
-	MessageId   int32            `json:"message_id," validate:"required"`
-	UserId      int64            `json:"user_id" validate:"required"`
-	Message     []MessageSegment `json:"message" validate:"dive,required"`
-	RawMessage  string           `json:"raw_message" validate:"required"`
-	Font        int32            `json:"font" validate:"required"`
-	Sender      Sender           `json:"sender" validate:"required"`
+	MessageType string           `json:"message_type"`
+	MessageId   int32            `json:"message_id,"`
+	UserId      int64            `json:"user_id"`
+	Message     []MessageSegment `json:"message"`
+	RawMessage  string           `json:"raw_message"`
+	Font        int32            `json:"font"`
+	Sender      Sender           `json:"sender"`
 
 	// group
-	GroupId   int64     `json:"group_id" validate:"required_if=MessageType group"`
+	GroupId   int64     `json:"group_id"`
 	Anonymous Anonymous `json:"anonymous"`
 }
 
 type Sender struct {
-	UserId   int    `json:"user_id" validate:"required"`
-	Nickname string `json:"nickname" validate:"required"`
-	Sex      string `json:"sex" validate:"oneof=male female unknown"`
+	UserId   int    `json:"user_id"`
+	Nickname string `json:"nickname"`
+	Sex      string `json:"sex"`
 	Age      int    `json:"age"`
 	Card     string `json:"card"`
 

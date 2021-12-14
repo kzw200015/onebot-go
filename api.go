@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 )
 
@@ -40,7 +41,12 @@ func (bot *Bot) Request(action string, requestBody interface{}) (APIResp, error)
 		return APIResp{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, path.Join(bot.BotConfig.ApiConfig.Address), bytes.NewReader(bs))
+	u, err := bot.getActionUrl(action)
+	if err != nil {
+		return APIResp{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(bs))
 	if err != nil {
 		return APIResp{}, err
 	}
@@ -65,4 +71,13 @@ func (bot *Bot) Request(action string, requestBody interface{}) (APIResp, error)
 	}
 
 	return apiResp, nil
+}
+
+func (bot *Bot) getActionUrl(action string) (string, error) {
+	u, err := url.Parse(bot.BotConfig.ApiConfig.Address)
+	if err != nil {
+		return "", err
+	}
+	u.Path = path.Join(u.Path, action)
+	return u.String(), nil
 }

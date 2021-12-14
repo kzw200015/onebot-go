@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -44,7 +45,9 @@ func New(botConfig BotConfig) *Bot {
 		BotConfig:  &botConfig,
 		Logger:     DefaultLogger(logrus.DebugLevel),
 		httpServer: http.NewServeMux(),
-		handlerMap: &HandlerMap{},
+		handlerMap: &HandlerMap{
+			Map: &sync.Map{},
+		},
 	}
 }
 
@@ -66,10 +69,13 @@ func (bot *Bot) eventDispatcher(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if receivedSig := strings.TrimPrefix(r.Header.Get("X-Signature"), "sha1="); checkSignature(receivedSig, body, bot.BotConfig.ServerConfig.Secret) {
-		bot.Logger.Warnln("签名认证失败")
-		w.WriteHeader(http.StatusForbidden)
-		return
+	sig := r.Header.Get("X-Signature")
+	if sig != "" {
+		if receivedSig := strings.TrimPrefix(r.Header.Get("X-Signature"), "sha1="); !checkSignature(receivedSig, body, bot.BotConfig.ServerConfig.Secret) {
+			bot.Logger.Warnln("签名认证失败")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
