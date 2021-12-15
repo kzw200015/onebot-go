@@ -116,7 +116,7 @@ func (bot *Bot) dispatch(body []byte, postType string) {
 			}
 		}
 
-		go handler.Handle(bot, event)
+		go handler.Handle(&Context{Event: event, Bot: bot})
 	}
 }
 

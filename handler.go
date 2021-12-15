@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-type EventHandlerFunc func(*Bot, Event)
+type EventHandlerFunc func(*Context)
 
 type EventHandler struct {
 	MessagePrefix string
