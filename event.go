@@ -12,9 +12,9 @@ const (
 
 // Event 事件 https://github.com/botuniverse/onebot-11/tree/master/event
 type Event struct {
-	Time     int64  `json:"time" validate:"required"`
-	SelfId   int64  `json:"self_id" validate:"required"`
-	PostType string `json:"post_type" validate:"oneof=message notice request meta_event"`
+	Time     int64  `json:"time"`
+	SelfId   int64  `json:"self_id"`
+	PostType string `json:"post_type"`
 
 	SubType string `json:"sub_type"`
 

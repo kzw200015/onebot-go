@@ -98,11 +98,6 @@ func (bot *Bot) dispatch(body []byte, postType string) {
 		return
 	}
 
-	if err := DefaultEventValidator().Validate(&event); err != nil {
-		bot.Logger.Errorln("解析 MessageEvent 错误: " + err.Error())
-		return
-	}
-
 	handlers := bot.handlerMap.GetHandlers(postType)
 	for _, handler := range handlers {
 
